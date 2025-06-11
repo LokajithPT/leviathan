@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command & Control Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .client-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .client-table th, .client-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        .client-table th {
+            background-color: #333;
+            color: #fff;
+        }
+        .client-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status-online {
+            color: green;
+            font-weight: bold;
+        }
+        .status-offline {
+            color: red;
+        }
+        .action-button {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .action-button:hover {
+            background-color: #45a049;
+        }
+        .refresh-button {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .refresh-button:hover {
+            background-color: #0b7dda;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Command & Control Dashboard</h1>
+            <button class="refresh-button" onclick="location.reload()">Refresh</button>
+        </div>
+        
+        <table class="client-table">
+            <thead>
+                <tr>
+                    <th>Hostname</th>
+                    <th>IP Address</th>
+                    <th>OS Info</th>
+                    <th>Username</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if clients %}
+                    {% for client_id, client in clients.items() %}
+                        <tr>
+                            <td>{{ client.hostname }}</td>
+                            <td>{{ client.ip_address }}</td>
+                            <td>{{ client.os_info }}</td>
+                            <td>{{ client.username }}</td>
+                            <td class="{% if client.status == 'Online' %}status-online{% else %}status-offline{% endif %}">
+                                {{ client.status }}
+                            </td>
+                            <td>{{ client.last_seen }}</td>
+                            <td>
+                                <a href="/client/{{ client_id }}" class="action-button">Connect</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center;">No clients connected</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Auto refresh the page every 10 seconds
+        setTimeout(function() {
+            location.reload();
+        }, 10000);
+    </script>
+</body>
+</html>

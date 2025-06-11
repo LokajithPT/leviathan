@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Device Dashboard</title>
+</head>
+<body>
+    <h1>Active Devices</h1>
+    <ul>
+        {% for device, info in active_devices.items() %}
+        <li>
+            <b>{{ device }}</b> — IP: {{ info.ip }} — Last Seen: {{ info.last_seen }}
+            <a href="/terminal/{{ device }}">[Open Terminal]</a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2>Uploaded Devices</h2>
+    <ul>
+        {% for folder in folders %}
+            <li>{{ folder }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+

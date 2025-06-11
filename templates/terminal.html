@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal - {{ client.hostname }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background-color: #2b2b2b;
+            color: #f0f0f0;
+        }
+        h1 {
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .terminal {
+            background-color: #1e1e1e;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            height: 500px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .command-form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .command-input {
+            flex-grow: 1;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            background-color: #1e1e1e;
+            border: 1px solid #555;
+            color: #f0f0f0;
+        }
+        .send-button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .send-button:hover {
+            background-color: #45a049;
+        }
+        .back-button {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .back-button:hover {
+            background-color: #0b7dda;
+        }
+        .client-info {
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .command-output {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .command-text {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .timestamp {
+            color: #888;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .output-text {
+            color: #f0f0f0;
+            margin-top: 5px;
+            padding-left: 10px;
+        }
+        .debug-panel {
+            background-color: #333;
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .debug-button {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .refresh-button {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Terminal - {{ client.hostname }}</h1>
+            <div>
+                <button class="refresh-button" id="refresh-button">Refresh Results</button>
+                <a href="/" class="back-button">Back to Dashboard</a>
+            </div>
+        </div>
+        
+        <div class="client-info">
+            <p><strong>Hostname:</strong> {{ client.hostname }} | <strong>IP:</strong> {{ client.ip_address }} | <strong>Status:</strong> <span id="client-status" style="color: {% if client.status == 'Online' %}green{% else %}red{% endif %};">{{ client.status }}</span></p>
+            <p><strong>OS:</strong> {{ client.os_info }} | <strong>Username:</strong> {{ client.username }}</p>
+        </div>
+        
+        <div class="terminal" id="terminal-output">
+            <!-- Command outputs will be populated here -->
+        </div>
+        
+        <form class="command-form" id="command-form">
+            <input type="text" class="command-input" id="command-input" placeholder="Enter command..." autocomplete="off">
+            <button type="submit" class="send-button">Send</button>
+        </form>
+
+        <button class="debug-button" id="toggle-debug">Toggle Debug Info</button>
+        <div class="debug-panel" id="debug-panel">
+            <p>Last API Response: <span id="last-api-response">None</span></p>
+            <p>Command Queue: <span id="command-queue">Empty</span></p>
+        </div>
+    </div>
+
+    <script>
+        const terminalOutput = document.getElementById('terminal-output');
+        const commandForm = document.getElementById('command-form');
+        const commandInput = document.getElementById('command-input');
+        const clientStatus = document.getElementById('client-status');
+        const refreshButton = document.getElementById('refresh-button');
+        const toggleDebugButton = document.getElementById('toggle-debug');
+        const debugPanel = document.getElementById('debug-panel');
+        const lastApiResponse = document.getElementById('last-api-response');
+        const commandQueue = document.getElementById('command-queue');
+        
+        const clientId = "{{ client.id }}";
+        let commandsInProgress = {};
+        
+        // Function to format timestamp
+        function formatTimestamp(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString();
+        }
+        
+        // Toggle debug panel
+        toggleDebugButton.addEventListener('click', function() {
+            if (debugPanel.style.display === 'none' || debugPanel.style.display === '') {
+                debugPanel.style.display = 'block';
+            } else {
+                debugPanel.style.display = 'none';
+            }
+        });
+        
+        // Add a command to the terminal display
+        function addCommandToTerminal(command, timestamp, commandId) {
+            const commandDiv = document.createElement('div');
+            commandDiv.className = 'command-output';
+            commandDiv.dataset.commandId = commandId;
+            commandDiv.innerHTML = `
+                <div class="command-text">$ ${command} <span class="timestamp">${formatTimestamp(timestamp)}</span></div>
+                <div class="output-text">Processing...</div>
+            `;
+            terminalOutput.appendChild(commandDiv);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            return commandDiv;
+        }
+        
+        // Update command output
+        function updateCommandOutput(commandDiv, output) {
+            const outputDiv = commandDiv.querySelector('.output-text');
+            outputDiv.textContent = output;
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+        
+        // Send command to the server
+        function sendCommand(command) {
+            const timestamp = new Date().toISOString();
+            
+            // Make API call to send command
+            fetch(`/api/send_command/${clientId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command: command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const commandId = data.command_id;
+                    
+                    // Create command display in terminal
+                    const commandDiv = addCommandToTerminal(command, timestamp, commandId);
+                    
+                    // Store command for polling
+                    commandsInProgress[commandId] = {
+                        div: commandDiv,
+                        command: command,
+                        timestamp: timestamp
+                    };
+                    
+                    // Update debug info
+                    commandQueue.textContent = Object.keys(commandsInProgress).length + ' commands pending';
+                    
+                    // Start polling for results immediately
+                    setTimeout(() => {
+                        pollForResults();
+                    }, 1000);
+                } else {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'command-output';
+                    errorDiv.innerHTML = `
+                        <div class="command-text">$ ${command} <span class="timestamp">${formatTimestamp(timestamp)}</span></div>
+                        <div class="output-text">Error: ${data.message}</div>
+                    `;
+                    terminalOutput.appendChild(errorDiv);
+                    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                }
+                
+                // Update debug info
+                lastApiResponse.textContent = JSON.stringify(data);
+            })
+            .catch(error => {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'command-output';
+                errorDiv.innerHTML = `
+                    <div class="command-text">$ ${command} <span class="timestamp">${formatTimestamp(timestamp)}</span></div>
+                    <div class="output-text">Error: ${error.message}</div>
+                `;
+                terminalOutput.appendChild(errorDiv);
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                
+                // Update debug info
+                lastApiResponse.textContent = error.message;
+            });
+        }
+        
+        // Poll for command results
+        function pollForResults() {
+            // Skip if no commands in progress
+            if (Object.keys(commandsInProgress).length === 0) {
+                return;
+            }
+            
+            fetch(`/api/get_results/${clientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        // Update debug info
+                        lastApiResponse.textContent = JSON.stringify(data).substring(0, 100) + '...';
+                        
+                        // Process each result
+                        data.results.forEach(result => {
+                            const commandId = result.id;
+                            
+                            // Check if we have this command in progress
+                            if (commandsInProgress[commandId]) {
+                                const commandDiv = commandsInProgress[commandId].div;
+                                updateCommandOutput(commandDiv, result.result);
+                                delete commandsInProgress[commandId];
+                            } else {
+                                // Find by attribute
+                                const existingDiv = document.querySelector(`[data-command-id="${commandId}"]`);
+                                if (existingDiv) {
+                                    updateCommandOutput(existingDiv, result.result);
+                                } else {
+                                    // This is a command we didn't know about
+                                    const commandDiv = addCommandToTerminal(
+                                        result.command, 
+                                        result.timestamp,
+                                        commandId
+                                    );
+                                    updateCommandOutput(commandDiv, result.result);
+                                }
+                            }
+                        });
+                        
+                        // Update debug info
+                        commandQueue.textContent = Object.keys(commandsInProgress).length + ' commands pending';
+                        
+                        // Check client status
+                        fetch(`/api/heartbeat/${clientId}`, { method: 'POST' })
+                            .then(response => response.json())
+                            .then(statusData => {
+                                if (statusData.status === 'ok') {
+                                    clientStatus.textContent = 'Online';
+                                    clientStatus.style.color = 'green';
+                                } else {
+                                    clientStatus.textContent = 'Offline';
+                                    clientStatus.style.color = 'red';
+                                }
+                            })
+                            .catch(() => {
+                                clientStatus.textContent = 'Unknown';
+                                clientStatus.style.color = 'orange';
+                            });
+                        
+                        // Continue polling if there are still commands in progress
+                        if (Object.keys(commandsInProgress).length > 0) {
+                            setTimeout(pollForResults, 2000);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling for results:', error);
+                    // Retry after a short delay
+                    setTimeout(pollForResults, 5000);
+                });
+        }
+        
+        // Load existing command history
+        function loadCommandHistory() {
+            fetch(`/api/get_results/${clientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        // Sort results by timestamp
+                        const sortedResults = data.results.sort((a, b) => {
+                            return new Date(a.timestamp) - new Date(b.timestamp);
+                        });
+                        
+                        // Display results
+                        sortedResults.forEach(result => {
+                            const commandDiv = addCommandToTerminal(
+                                result.command, 
+                                result.timestamp,
+                                result.id
+                            );
+                            updateCommandOutput(commandDiv, result.result);
+                        });
+                        
+                        // Update debug info
+                        lastApiResponse.textContent = `Loaded ${sortedResults.length} previous commands`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading command history:', error);
+                    terminalOutput.innerHTML += `<div class="command-output"><div class="output-text">Error loading command history: ${error.message}</div></div>`;
+                });
+        }
+        
+        // Handle form submission
+        commandForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const command = commandInput.value.trim();
+            if (command) {
+                sendCommand(command);
+                commandInput.value = '';
+            }
+        });
+        
+        // Handle refresh button
+        refreshButton.addEventListener('click', function() {
+            // Force poll results
+            pollForResults();
+        });
+        
+        // Load command history when the page loads
+        window.addEventListener('load', function() {
+            loadCommandHistory();
+            
+            // Start polling for any pending commands
+            setTimeout(pollForResults, 2000);
+        });
+        
+        // Poll for results and check client status periodically
+        setInterval(pollForResults, 5000);
+    </script>
+</body>
+</html>
