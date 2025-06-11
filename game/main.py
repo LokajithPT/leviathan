@@ -24,7 +24,7 @@ try:
     with open("words.txt") as f:
         WORDS = f.read().splitlines()
 except FileNotFoundError:
-    print("🔥 words.txt not found!")
+    print("words.txt not found!")
     sys.exit()
 
 def get_words(n):
