@@ -1,0 +1,6 @@
+step 1 -> install pywin32 
+step2 -> main.py and malw.exe 
+step3 -> pyinstaller or cx_freeze to bundle 
+step4 -> use inno steup to wrap it into a real .exe 
+              puts files in wsomewhere 
+              registers exe asa services 
