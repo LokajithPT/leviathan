@@ -1,0 +1,26 @@
+import shit :
+  pygame random time sys is impported 
+
+  we initialise the pygame 
+
+
+basic shit like the pygame command is written ... 
+line 9 10 11 
+
+.. some fonts  and colours are declared 
+
+
+a try is initialised opening the words.txt fiel which is in the driectory and the words are appended in the  WORDS variable 
+
+
+get_words funtion ()
+
+        input str is null 
+        active is true 
+        while active is set 
+          screen is filled with bg 
+          prompt is  asked for number of words and the input is taken 
+
+
+wait this shit is good .. i wanna make something with pygame or something i love it 
+
